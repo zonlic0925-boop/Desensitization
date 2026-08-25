@@ -24,7 +24,7 @@ def synthetic_pdf(tmp_path) -> str:
     page.draw_line((100, 100), (100, 200))
     page.draw_line((300, 100), (300, 200))
     # 单元格内敏感文字
-    page.insert_text((110, 140), "Fisher Controls", fontname="helv", fontsize=12)
+    page.insert_text((110, 140), "CONFIDENTIAL CORP", fontname="helv", fontsize=12)
     # 单元格内图片（40x20 灰块）
     arr = np.full((20, 40, 3), 200, dtype=np.uint8)
     arr[:5, :, :] = 0
@@ -42,7 +42,7 @@ def _cell_box() -> RedactBox:
         box=Box(100, 100, 300, 200),
         boxed=True,
         manual_required=False,
-        terms=["Fisher Controls"],
+        terms=["CONFIDENTIAL CORP"],
         channel_labels=["vector_text"],
     )
 
@@ -64,8 +64,8 @@ def test_erase_mode_removes_text_keeps_line_art(synthetic_pdf: str, tmp_path) ->
     redact_pdf(synthetic_pdf, [_cell_box()], RedactMode.ERASE, out)
     doc = fitz.open(out)
     text = "".join(p.get_text() for p in doc)
-    assert "Fisher" not in text
-    assert "Controls" not in text
+    assert "CONFIDENTIAL" not in text
+    assert "CORP" not in text
     # 格线保留
     drawings = doc[0].get_drawings()
     assert len(drawings) >= 4
@@ -117,5 +117,5 @@ def test_empty_box_list_returns_output(synthetic_pdf: str, tmp_path) -> None:
     out = str(tmp_path / "out_empty.pdf")
     redact_pdf(synthetic_pdf, [], RedactMode.ERASE, out)
     doc = fitz.open(out)
-    assert "Fisher Controls" in doc[0].get_text()
+    assert "CONFIDENTIAL CORP" in doc[0].get_text()
     doc.close()

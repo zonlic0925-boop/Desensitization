@@ -24,7 +24,7 @@ def mixed_pdf(tmp_path) -> str:
     page.draw_line((100, 200), (300, 200))
     page.draw_line((100, 100), (100, 200))
     page.draw_line((300, 100), (300, 200))
-    page.insert_text((110, 140), "Fisher Controls", fontname="helv", fontsize=12)
+    page.insert_text((110, 140), "CONFIDENTIAL", fontname="helv", fontsize=12)
     page.insert_text((110, 300), "PROPRIETARY", fontname="helv", fontsize=12)
     doc.save(str(path), garbage=3, deflate=True)
     doc.close()
@@ -54,7 +54,7 @@ def test_boxed_executed_fallback_kept(mixed_pdf: str, tmp_path) -> None:
     doc = fitz.open(out)
     text = doc[0].get_text()
     doc.close()
-    assert "Fisher" not in text
+    assert "CONFIDENTIAL" not in text
     assert "PROPRIETARY" in text  # FALLBACK 未执行，原文保留
 
 
@@ -123,7 +123,7 @@ def _fake_ocr(texts: list[str]):
 def test_verify_hit_promotes_unboxed_image(tmp_path, monkeypatch) -> None:
     """D3：无框 Logo 图片，内容验证命中 → 补漏自动执行（不再 FALLBACK）。"""
     monkeypatch.setattr(
-        "core.detector.image_verify.get_ocr_engine", lambda: _fake_ocr(["EMERSON"])
+        "core.detector.image_verify.get_ocr_engine", lambda: _fake_ocr(["CONFIDENTIAL"])
     )
     pdf = _page_with_image(tmp_path, with_grid=False)
     out = str(tmp_path / "logo_desensitized.pdf")
@@ -136,7 +136,7 @@ def test_verify_hit_promotes_unboxed_image(tmp_path, monkeypatch) -> None:
     row = data["boxes"][0]
     assert row["boxed"] is True
     assert row["manual_required"] is False
-    assert "emerson" in row["terms"]
+    assert "confidential" in [t.lower() for t in row["terms"]]
 
 
 def test_verify_miss_downgrades_boxed_image(tmp_path, monkeypatch) -> None:
@@ -181,7 +181,7 @@ def _manual_only_pdf(tmp_path) -> str:
     doc = fitz.open()
     page = doc.new_page(width=400, height=400)
     page.insert_text((110, 100), "PROPRIETARY", fontname="helv", fontsize=12)
-    page.insert_text((110, 300), "SECRET", fontname="helv", fontsize=12)
+    page.insert_text((110, 300), "RESTRICTED", fontname="helv", fontsize=12)
     doc.save(str(path), garbage=3, deflate=True)
     doc.close()
     return str(path)
@@ -232,7 +232,7 @@ def test_manual_executed_after_user_confirmation(tmp_path) -> None:
     text = doc[0].get_text()
     doc.close()
     assert "PROPRIETARY" not in text
-    assert "SECRET" not in text
+    assert "RESTRICTED" not in text
 
 
 def test_partial_confirmation_executes_only_selected(tmp_path) -> None:
@@ -247,8 +247,8 @@ def test_partial_confirmation_executes_only_selected(tmp_path) -> None:
     doc = fitz.open(out)
     text = doc[0].get_text()
     doc.close()
-    # 只确认第一框（PROPRIETARY 在 y=100 处），SECRET 保留
-    assert "SECRET" in text
+    # 只确认第一框（PROPRIETARY 在 y=100 处），RESTRICTED 保留
+    assert "RESTRICTED" in text
 
 
 def test_pipeline_add_and_remove_manual_box(tmp_path) -> None:

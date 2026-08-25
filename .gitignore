@@ -1,7 +1,7 @@
-# Python 临时与编译产物
+﻿# Python 临时与编译产物
 __pycache__/
 *.py[cod]
-*$py.class
+*.class
 *.so
 .pytest_cache/
 .coverage
@@ -26,6 +26,7 @@ Thumbs.db
 output/
 outputs/
 dist/
+dist_release/
 build/
 *.spec
 *.json

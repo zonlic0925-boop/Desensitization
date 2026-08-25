@@ -35,7 +35,7 @@ def _wait_content(view, timeout: float = 10.0) -> bool:
 
 
 def _make_mixed_pdf(tmp_path, name: str) -> str:
-    """一页：格内 Fisher Controls（自动）+ 无框 PROPRIETARY（待人工）。"""
+    """一页：格内 CONFIDENTIAL（自动）+ 无框 PROPRIETARY（待人工）。"""
     path = tmp_path / name
     doc = fitz.open()
     page = doc.new_page(width=400, height=400)
@@ -43,7 +43,7 @@ def _make_mixed_pdf(tmp_path, name: str) -> str:
     page.draw_line((100, 200), (300, 200))
     page.draw_line((100, 100), (100, 200))
     page.draw_line((300, 100), (300, 200))
-    page.insert_text((110, 140), "Fisher Controls", fontname="helv", fontsize=12)
+    page.insert_text((110, 140), "CONFIDENTIAL", fontname="helv", fontsize=12)
     page.insert_text((110, 300), "PROPRIETARY", fontname="helv", fontsize=12)
     doc.save(str(path), garbage=3, deflate=True)
     doc.close()
@@ -90,7 +90,7 @@ def test_one_click_batch_all(window, tmp_path) -> None:
         doc = fitz.open(str(out))
         text = doc[0].get_text()
         doc.close()
-        assert "Fisher" not in text
+        assert "CONFIDENTIAL" not in text
         assert "PROPRIETARY" not in text  # 一键授权全部执行（含待人工）
 
 

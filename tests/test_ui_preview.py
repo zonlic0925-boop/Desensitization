@@ -45,7 +45,7 @@ def _make_mixed_pdf(tmp_path) -> str:
     page.draw_line((100, 200), (300, 200))
     page.draw_line((100, 100), (100, 200))
     page.draw_line((300, 100), (300, 200))
-    page.insert_text((110, 140), "Fisher Controls", fontname="helv", fontsize=12)
+    page.insert_text((110, 140), "CONFIDENTIAL", fontname="helv", fontsize=12)
     page.insert_text((110, 300), "PROPRIETARY", fontname="helv", fontsize=12)
     doc.save(str(path), garbage=3, deflate=True)
     doc.close()
@@ -69,7 +69,7 @@ def test_preview_before_has_content_after_empty(window, tmp_path) -> None:
     result = Pipeline(PipelineConfig(use_ocr=False)).process(pdf)
     window._show_result(result)
     assert _wait_content(window._before_view)
-    assert not window._after_view.has_content()  # 未执行 -> 空
+    assert not window._after_view.has_content()  # 仅检测未生成输出 -> 右侧脱敏预览为空
 
 
 def test_preview_ctrl_wheel_zooms(window, tmp_path) -> None:

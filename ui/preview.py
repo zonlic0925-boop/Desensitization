@@ -163,6 +163,14 @@ class PreviewView(QGraphicsView):
             except Exception:  # noqa: BLE001
                 self._page_size_pt = (0.0, 0.0)
         display_scale = self._fit_scale() * self._zoom
+        normalized_overlay: list[tuple[Box, QColor, bool]] = []
+        if overlay:
+            for item in overlay:
+                if len(item) == 2:
+                    normalized_overlay.append((item[0], item[1], False))
+                elif len(item) >= 3:
+                    normalized_overlay.append((item[0], item[1], bool(item[2])))
+
         if (
             force_reload
             or self._page_key != key
@@ -171,11 +179,11 @@ class PreviewView(QGraphicsView):
             or display_scale < self._pix_scale / RERENDER_FACTOR
         ):
             self._page_key = key
-            self._overlay = list(overlay) if overlay else []
+            self._overlay = normalized_overlay
             self._token += 1
             self._worker.request(self._token, key[0], page_index, display_scale)
         elif overlay is not None:
-            self._overlay = list(overlay)
+            self._overlay = normalized_overlay
             self._redraw_overlay()
         self._apply_display()
 

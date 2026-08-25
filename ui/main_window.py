@@ -388,21 +388,46 @@ class MainWindow(QMainWindow):
     # ---------- 文件队列与一键脱敏 ----------
 
     def on_manage_rules(self) -> None:
-        terms_path = Path("rules/sensitive_terms.txt")
+        terms_path = Path("rules/sensitive_terms.txt").resolve()
+        generic_template = (
+            "# ==========================================\n"
+            "# 通用工程图纸保密与敏感信息规则表\n"
+            "# 每行一个敏感词/声明短语（不区分大小写，支持 # 注释）\n"
+            "# ==========================================\n\n"
+            "# 1. 国际通用保密与版权声明\n"
+            "CONFIDENTIAL\n"
+            "PROPRIETARY\n"
+            "RESTRICTED\n"
+            "STRICTLY CONFIDENTIAL\n"
+            "INTERNAL USE ONLY\n"
+            "DO NOT DISTRIBUTE\n"
+            "NOT FOR DISTRIBUTION\n"
+            "TRADE SECRET\n"
+            "COMPANY PROPRIETARY\n"
+            "CONFIDENTIAL NOTICE\n"
+            "ALL RIGHTS RESERVED\n\n"
+            "# 2. 自定义企业敏感词/项目名（在下方追加即可）：\n"
+        )
         initial_text = ""
-        if terms_path.exists():
+        if terms_path.is_file():
             try:
                 initial_text = terms_path.read_text(encoding="utf-8")
             except Exception as exc:
                 logger.warning("读取规则文件失败: %s", exc)
 
+        if not initial_text.strip():
+            initial_text = generic_template
+
         dlg = QDialog(self)
         dlg.setWindowTitle("脱敏规则管理")
-        dlg.resize(550, 450)
+        dlg.resize(580, 480)
         dlg_layout = QVBoxLayout(dlg)
 
-        tip_lbl = QLabel("在下方编辑脱敏词表（每行一个词条，支持 # 注释）：\n更改保存后将立即对后续检测生效。")
-        tip_lbl.setStyleSheet("color: #555;")
+        tip_lbl = QLabel(
+            "在下方编辑脱敏词表（每行一个词条，支持 # 注释）。\n"
+            "已预置通用图纸保密声明（CONFIDENTIAL、PROPRIETARY 等），您可直接添加企业名称，更改保存后立即热生效。"
+        )
+        tip_lbl.setStyleSheet("color: #444; font-size: 12px; margin-bottom: 4px;")
         dlg_layout.addWidget(tip_lbl)
 
         text_edit = QTextEdit()
@@ -410,13 +435,21 @@ class MainWindow(QMainWindow):
         dlg_layout.addWidget(text_edit, 1)
 
         btn_box = QHBoxLayout()
+        reset_btn = QPushButton("✨ 恢复推荐通用保密规则")
+        reset_btn.setToolTip("填入工程图纸最常用的国际通用保密词（CONFIDENTIAL 等）")
         save_btn = QPushButton("💾 保存规则")
         cancel_btn = QPushButton("取消")
         save_btn.setFont(QFont("", 10, QFont.Bold))
+        btn_box.addWidget(reset_btn)
         btn_box.addStretch(1)
         btn_box.addWidget(save_btn)
         btn_box.addWidget(cancel_btn)
         dlg_layout.addLayout(btn_box)
+
+        def _do_reset():
+            text_edit.setPlainText(generic_template)
+
+        reset_btn.clicked.connect(_do_reset)
 
         def _do_save():
             content = text_edit.toPlainText().strip()
@@ -424,9 +457,12 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(dlg, "提示", "规则词表不能为空！")
                 return
             try:
-                terms_path.parent.mkdir(parents=True, exist_ok=True)
+                # 确保上层目录存在，避免对已存在的目录重复 mkdir 触发 Windows WinError 5
+                parent_dir = terms_path.parent
+                if not parent_dir.exists():
+                    parent_dir.mkdir(parents=True, exist_ok=True)
                 terms_path.write_text(content, encoding="utf-8")
-                # 重新加载规则引擎
+                # 重新加载规则引擎（热重载）
                 self._pipeline = Pipeline()
                 QMessageBox.information(dlg, "保存成功", "脱敏规则已保存并已实时热重载！")
                 dlg.accept()
@@ -692,14 +728,10 @@ class MainWindow(QMainWindow):
             self._before_view.set_content(
                 self._result.source_path, page_index, self._page_zoom, overlay
             )
-            # 右侧脱敏后视图同步显示高亮选框叠加层（便于用户直观核对选中抹除区域）
+            # 右侧脱敏后视图：若已生成 output_path 则加载并显示叠加框；未生成则清空
             after_path = self._result.output_path
-            if after_path is None:
-                default_target = output_path_for(self._result.source_path, out_dir=self._output_dir)
-                if Path(default_target).exists():
-                    after_path = default_target
             self._after_view.set_content(
-                after_path, page_index, self._page_zoom, overlay
+                after_path, page_index, self._page_zoom, overlay if after_path else None
             )
         elif self._selected_file:
             self._before_view.set_content(

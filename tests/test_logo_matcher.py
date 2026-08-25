@@ -1,37 +1,36 @@
-"""LogoMatcher 视觉模板匹配器测试。"""
+"""Logo 模板匹配器测试：验证自包含模板匹配与空目录安全冷启动。"""
 
-from pathlib import Path
+from __future__ import annotations
+
+import cv2
+import numpy as np
 import pytest
-import fitz
 
 from core.detector.logo_matcher import LogoMatcher
-from core.model import Channel
 
 
-def test_logo_matcher_load():
-    matcher = LogoMatcher()
-    assert len(matcher.templates) >= 3
+def test_logo_matcher_empty_dir(tmp_path) -> None:
+    matcher = LogoMatcher(logo_dir=str(tmp_path))
+    assert matcher.templates == []
+    dummy = np.zeros((100, 100), dtype=np.uint8)
+    assert matcher.match(dummy) == []
 
 
-def test_logo_matcher_empty_page():
-    matcher = LogoMatcher()
-    doc = fitz.open()
-    page = doc.new_page(width=300, height=300)
-    hits = list(matcher.detect(page, 0))
-    assert hits == []
+def test_logo_matcher_with_synthetic_template(tmp_path) -> None:
+    # 构造合成模板
+    img = np.zeros((50, 50), dtype=np.uint8)
+    img[10:40, 10:40] = 255
+    tmpl_path = tmp_path / "customlogo_template.png"
+    cv2.imwrite(str(tmpl_path), img)
 
+    matcher = LogoMatcher(logo_dir=str(tmp_path))
+    assert len(matcher.templates) == 1
+    assert matcher.templates[0].term == "CUSTOMLOGO"
 
-def test_logo_matcher_detection():
-    # Test on a known sample containing Emerson logo if available
-    sample_path = Path("Testing Drawings/GF15457_Markup_B.pdf")
-    if not sample_path.exists():
-        pytest.skip("Sample drawing not found")
-
-    matcher = LogoMatcher()
-    doc = fitz.open(str(sample_path))
-    hits = list(matcher.detect(doc[0], 0))
-    doc.close()
-
-    assert len(hits) >= 1
-    assert any("EMERSON" in h.matched_terms for h in hits)
-    assert all(h.channel == Channel.VECTOR_IMAGE for h in hits)
+    # 在场景图中匹配
+    scene = np.zeros((200, 200), dtype=np.uint8)
+    scene[50:100, 50:100] = 255
+    hits = matcher.match(scene)
+    assert len(hits) == 1
+    assert hits[0].term == "CUSTOMLOGO"
+    assert hits[0].score > 0.95

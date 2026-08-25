@@ -39,6 +39,7 @@ def _page_spans(page: fitz.Page) -> list[Box]:
 @dataclass
 class PipelineConfig:
     terms_file: str = str(DEFAULT_TERMS_REL)
+    terms: list[str] | None = None
     use_ocr: bool = True
     use_logo_matcher: bool = True
     image_verify: bool = True
@@ -70,7 +71,7 @@ def to_audit_dict(result: FileResult) -> dict:
 class Pipeline:
     def __init__(self, config: PipelineConfig | None = None):
         cfg = config or PipelineConfig()
-        terms = load_terms(cfg.terms_file)
+        terms = cfg.terms if cfg.terms is not None else load_terms(cfg.terms_file)
         engine = RuleEngine(terms)
         self._engine = engine
         self._vector = VectorChannel(engine)

@@ -108,7 +108,7 @@ class RuleEngine:
             if pat.search(text):
                 found.add(term)
                 continue
-            # 支持多词模糊匹配（如 "Fisher Controls" -> 匹配 "Flshor Controls" 等 OCR 变形）
+            # 支持多词模糊匹配（如 "ACME CORPORATION" -> 匹配 "ACME C0RP0RATION" 等 OCR 变形）
             if self._fuzzy and len(term) > SHORT_TERM_MAX_LEN:
                 term_lower = term.lower()
                 text_lower = text.lower()

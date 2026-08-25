@@ -7,11 +7,11 @@ import pytest
 from core.detector.rule_engine import RuleEngine, SHORT_TERM_MAX_LEN, load_terms
 
 TERMS = [
-    "Fisher Controls",
-    "Emerson Process Management",
-    "TopWorx",
+    "ACME CORP",
+    "GLOBAL INDUSTRIAL",
+    "TOP SECRET",
     "MKS",
-    "MARSHALLTOWN",
+    "SAMPLECITY",
     "CONFIDENTIAL",
     "PROPRIETARY",
 ]
@@ -23,8 +23,8 @@ def engine() -> RuleEngine:
 
 
 def test_exact_match_case_insensitive(engine: RuleEngine) -> None:
-    assert "Fisher Controls" in engine.match("FISHER CONTROLS INC.")
-    assert "TopWorx" in engine.match("topworx dx2000")
+    assert "ACME CORP" in engine.match("ACME CORP INC.")
+    assert "TOP SECRET" in engine.match("this is top secret info")
 
 
 def test_substring_match_within_longer_text(engine: RuleEngine) -> None:
@@ -41,15 +41,13 @@ def test_fuzzy_edit_distance_within_tolerance(engine: RuleEngine) -> None:
     # CONFIDENTIAL: len 12 -> tolerance = max(1, 12//8) = 1
     assert "CONFIDENTIAL" in engine.match("CONFIDENTIA")
     assert "CONFIDENTIAL" in engine.match("CONFIDENTAL")
-    # TopWorx: len 7 -> tolerance = 1
-    assert "TopWorx" in engine.match("TopWor")
-    # MARSHALLTOWN: len 12 -> tolerance = 1
-    assert "MARSHALLTOWN" in engine.match("MARSHALLTOW")
+    # SAMPLECITY: len 10 -> tolerance = 1
+    assert "SAMPLECITY" in engine.match("SAMPLECIT")
 
 
 def test_fuzzy_beyond_tolerance_not_matched(engine: RuleEngine) -> None:
     assert "CONFIDENTIAL" not in engine.match("CONFIDENT")  # 距离 3 > 1
-    assert "MARSHALLTOWN" not in engine.match("MARSHALLT")
+    assert "SAMPLECITY" not in engine.match("SAMPLEC")
 
 
 def test_fuzzy_not_applied_to_short_terms(engine: RuleEngine) -> None:
@@ -57,13 +55,12 @@ def test_fuzzy_not_applied_to_short_terms(engine: RuleEngine) -> None:
 
 
 def test_fuzzy_not_applied_to_phrase_terms(engine: RuleEngine) -> None:
-    # D1 回归锚点：单词级编辑距离不与整个短语比较（FISHERO 距 Fisher Controls 远超容差）
-    assert "Fisher Controls" not in engine.match("FISHERO")
-    assert "Fisher Controls" in engine.match("FISHER CONTROLS")
+    assert "ACME CORP" not in engine.match("ACMEX")
+    assert "ACME CORP" in engine.match("ACME CORP")
 
 
 def test_phrase_match(engine: RuleEngine) -> None:
-    assert "Emerson Process Management" in engine.match("EMERSON PROCESS MANAGEMENT")
+    assert "GLOBAL INDUSTRIAL" in engine.match("GLOBAL INDUSTRIAL MANAGEMENT")
 
 
 def test_empty_text_returns_nothing(engine: RuleEngine) -> None:
@@ -76,12 +73,13 @@ def test_no_fuzzy_mode_disables_edit_distance() -> None:
     assert strict.match("CONFIDENTIA") == []
 
 
-def test_load_terms_from_real_wordlist() -> None:
-    terms = load_terms("rules/sensitive_terms.txt")
-    assert len(terms) >= 10
-    assert "Fisher Controls" in terms
+def test_load_terms_from_file(tmp_path) -> None:
+    f = tmp_path / "custom_terms.txt"
+    f.write_text("# Comments\nCONFIDENTIAL\nPROPRIETARY\n", encoding="utf-8")
+    terms = load_terms(str(f))
+    assert len(terms) == 2
     assert "CONFIDENTIAL" in terms
-    assert "MKS" in terms
+    assert "PROPRIETARY" in terms
 
 
 def test_load_terms_missing_file_raises() -> None:
@@ -93,36 +91,35 @@ def test_short_term_constant() -> None:
     assert SHORT_TERM_MAX_LEN == 4
 
 
-TERMS_REAL = load_terms("rules/sensitive_terms.txt")
-
-
 def test_discriminator_tokens_keep_brand_drop_stopwords() -> None:
-    d = RuleEngine(TERMS_REAL).discriminator_tokens()
-    for tok in ("fisher", "emerson", "topworx", "marshalltown", "mks",
-                "confidential", "proprietary", "restricted", "secret"):
+    terms = [
+        "ACME Industrial",
+        "GLOBAL Process Management",
+        "CONFIDENTIAL",
+        "PROPRIETARY",
+    ]
+    d = RuleEngine(terms).discriminator_tokens()
+    for tok in ("acme", "global", "confidential", "proprietary"):
         assert tok in d, tok
-    for tok in ("process", "management", "controls", "company", "usa",
-                "kentucky", "inc", "llc", "co", "corp", "ltd", "the", "of", "not"):
+    for tok in ("process", "management", "industrial", "company", "inc", "ltd"):
         assert tok not in d, tok
 
 
 def test_image_tokens_normalize_case_and_punct() -> None:
-    tokens = RuleEngine.image_tokens("EMERSON, Louisville — KY? 'USA'")
-    assert tokens == {"emerson", "louisville", "ky", "usa"}
+    tokens = RuleEngine.image_tokens("ACME CORP, Springfield — IL? 'USA'")
+    assert tokens == {"acme", "corp", "springfield", "il", "usa"}
 
 
 def test_match_image_hits_single_word_of_phrase() -> None:
-    # D3 回归锚点：OCR 检出 'EMERSON' 单词，须命中 'Emerson Louisville, Kentucky, USA'
-    engine = RuleEngine(TERMS_REAL)
-    assert "emerson" in engine.match_image("EMERSON LOUISVILLE KENTUCKY USA")
-    assert "emerson" in engine.match_image("EMERSON")
+    engine = RuleEngine(["ACME GLOBAL MANUFACTURING", "CONFIDENTIAL"])
+    assert "acme" in engine.match_image("ACME SPRINGFIELD USA")
     assert "confidential" in engine.match_image("CONFIDENTIAL")
 
 
 def test_match_image_ignores_normal_content() -> None:
-    engine = RuleEngine(TERMS_REAL)
+    engine = RuleEngine(["ACME GLOBAL MANUFACTURING", "CONFIDENTIAL"])
     assert engine.match_image("PARTNUMBER ES-09708-1~17 QTY DESCRIPTION") == []
 
 
 def test_match_image_empty_text() -> None:
-    assert RuleEngine(TERMS_REAL).match_image("") == []
+    assert RuleEngine(["CONFIDENTIAL"]).match_image("") == []

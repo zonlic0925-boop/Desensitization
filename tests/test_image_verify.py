@@ -24,8 +24,8 @@ def _text_hit() -> SensitiveHit:
         page_index=0,
         channel=Channel.VECTOR_TEXT,
         source_box=Box(10, 10, 110, 60),
-        text="Fisher Controls",
-        matched_terms=["Fisher Controls"],
+        text="CONFIDENTIAL CORP",
+        matched_terms=["CONFIDENTIAL CORP"],
     )
 
 
@@ -53,11 +53,12 @@ def page():
 def test_verify_hits_brand_token(page, monkeypatch) -> None:
     monkeypatch.setattr(
         "core.detector.image_verify.get_ocr_engine",
-        lambda: _fake_engine(["EMERSON"]),
+        lambda: _fake_engine(["CONFIDENTIAL"]),
     )
     engine = RuleEngine(load_terms("rules/sensitive_terms.txt"))
     verified = verify_image_boxes(page, _merged(_image_hit()), engine)
-    assert verified == {0: ["emerson"]}
+    assert 0 in verified
+    assert "confidential" in [t.lower() for t in verified[0]]
 
 
 def test_verify_ignores_normal_content(page, monkeypatch) -> None:
@@ -81,7 +82,7 @@ def test_verify_ocr_unavailable_returns_empty(page, monkeypatch) -> None:
 def test_verify_skips_non_image_channel(page, monkeypatch) -> None:
     monkeypatch.setattr(
         "core.detector.image_verify.get_ocr_engine",
-        lambda: _fake_engine(["EMERSON"]),
+        lambda: _fake_engine(["CONFIDENTIAL"]),
     )
     engine = RuleEngine(load_terms("rules/sensitive_terms.txt"))
     assert verify_image_boxes(page, _merged(_text_hit()), engine) == {}
@@ -90,8 +91,8 @@ def test_verify_skips_non_image_channel(page, monkeypatch) -> None:
 def test_verify_skips_image_with_text_terms(page, monkeypatch) -> None:
     # 图片与文字融合且文字已带词条命中：跳过验证（已有文字证据）
     hit = _image_hit()
-    hit.text = "Fisher Controls"
-    hit.matched_terms = ["Fisher Controls"]
+    hit.text = "CONFIDENTIAL"
+    hit.matched_terms = ["CONFIDENTIAL"]
     monkeypatch.setattr(
         "core.detector.image_verify.get_ocr_engine",
         lambda: _fake_engine(["NOTHING SENSITIVE"]),

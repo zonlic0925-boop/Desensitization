@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class LogoTemplate:
     """Represents a single logo template loaded from disk."""
 
-    def __init__(self, name: str, image_gray: np.ndarray, term: str = "EMERSON", threshold: float = 0.80):
+    def __init__(self, name: str, image_gray: np.ndarray, term: str = "LOGO", threshold: float = 0.80):
         self.name = name
         self.image_gray = image_gray
         self.term = term
@@ -27,10 +27,7 @@ class LogoTemplate:
 
 
 class LogoMatcher:
-    """Detects company logos (Emerson, Fisher, TopWorx, etc.) in PDF pages
-
-    via fast coarse-to-fine multi-scale normalized cross-correlation template matching.
-    """
+    """Detects company logos in PDF pages via multi-scale normalized cross-correlation template matching."""
 
     def __init__(
         self,
@@ -58,16 +55,9 @@ class LogoMatcher:
                 if img is None or img.size == 0:
                     continue
 
-                stem = tmpl_path.stem.lower()
-                if "fisher" in stem:
-                    term = "FISHER"
-                    thresh = 0.80
-                elif "topworx" in stem:
-                    term = "TOPWORX"
-                    thresh = 0.78
-                else:
-                    term = "EMERSON"
-                    thresh = 0.80
+                # Term defaults to prefix or uppercase template file stem, default threshold 0.80
+                term = tmpl_path.stem.split("_")[0].upper() if "_" in tmpl_path.stem else tmpl_path.stem.upper()
+                thresh = 0.80
 
                 self.templates.append(LogoTemplate(name=tmpl_path.stem, image_gray=img, term=term, threshold=thresh))
                 logger.debug(f"Loaded logo template {tmpl_path.name} ({img.shape[1]}x{img.shape[0]})")

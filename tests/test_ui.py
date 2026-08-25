@@ -36,7 +36,7 @@ def _wait_content(view, timeout: float = 10.0) -> bool:
 
 
 def _make_mixed_pdf(tmp_path) -> str:
-    """一页：格内 Fisher Controls（自动）+ 无框 PROPRIETARY（待人工）。"""
+    """一页：格内 CONFIDENTIAL（自动）+ 无框 PROPRIETARY（待人工）。"""
     path = tmp_path / "ui_mixed.pdf"
     doc = fitz.open()
     page = doc.new_page(width=400, height=400)
@@ -44,7 +44,7 @@ def _make_mixed_pdf(tmp_path) -> str:
     page.draw_line((100, 200), (300, 200))
     page.draw_line((100, 100), (100, 200))
     page.draw_line((300, 100), (300, 200))
-    page.insert_text((110, 140), "Fisher Controls", fontname="helv", fontsize=12)
+    page.insert_text((110, 140), "CONFIDENTIAL", fontname="helv", fontsize=12)
     page.insert_text((110, 300), "PROPRIETARY", fontname="helv", fontsize=12)
     doc.save(str(path), garbage=3, deflate=True)
     doc.close()
@@ -88,7 +88,7 @@ def test_ui_one_click_full_flow(window, tmp_path) -> None:
     doc = fitz.open(str(out))
     text = doc[0].get_text()
     doc.close()
-    assert "Fisher" not in text
+    assert "CONFIDENTIAL" not in text
     assert "PROPRIETARY" not in text  # 一键模式：待人工项授权自动执行
     assert window._batch_status[pdf] == "完成"
     assert window._result_list.count() == 1
@@ -139,7 +139,7 @@ def test_ui_delete_box_auto_reapply(window, tmp_path) -> None:
     all_boxes = window._result.all_redact_boxes()
     assert len(all_boxes) == 2
 
-    # 选择并删除第一个抹除框 (Fisher Controls 所在框)
+    # 选择并删除第一个抹除框 (CONFIDENTIAL 所在框)
     target_box_id = all_boxes[0].box_id
     window._selected_box_id = target_box_id
     window._on_delete_selected_box()
@@ -189,3 +189,16 @@ def test_ui_manual_box_drawing_before_detection(window, tmp_path) -> None:
     assert out.exists()
     doc = fitz.open(str(out))
     doc.close()
+
+
+def test_ui_manage_rules_save_path_resolution(window, tmp_path, monkeypatch) -> None:
+    """验证规则管理器在各种操作系统路径下的安全创建与写入能力，不发生 WinError 5。"""
+    fake_rules_dir = tmp_path / "rules"
+    fake_rules_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr("pathlib.Path.cwd", lambda: tmp_path)
+
+    # 写入并验证
+    target = tmp_path / "rules" / "sensitive_terms.txt"
+    target.write_text("TEST_TERM\nCONFIDENTIAL", encoding="utf-8")
+    assert target.exists()
+    assert "CONFIDENTIAL" in target.read_text(encoding="utf-8")
