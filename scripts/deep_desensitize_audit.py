@@ -14,7 +14,7 @@ import fitz  # PyMuPDF
 import cv2
 import numpy as np
 
-WORKSPACE = Path(r"C:\Users\Zonlic\Desktop\experiment\Desensitization")
+WORKSPACE = Path(__file__).resolve().parent.parent
 DRAWINGS_DIR = WORKSPACE / "Testing Drawings"
 RULES_FILE = WORKSPACE / "rules" / "sensitive_terms.txt"
 
