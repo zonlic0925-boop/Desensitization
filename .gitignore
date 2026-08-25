@@ -1,0 +1,42 @@
+# Python 临时与编译产物
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 虚拟环境
+.venv/
+venv/
+ENV/
+env/
+
+# IDE 与编辑器配置
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 项目业务输出与临时产物
+output/
+outputs/
+dist/
+build/
+*.spec
+*.json
+*.zip
+*.log
+
+# 客户图纸与测试样本（数据安全保护）
+Testing Drawings/
+*.pdf
+*.PDF
+
+# 外部非源码参考库与配置
+skills-master/
+.zcode/
