@@ -41,3 +41,6 @@ Testing Drawings/
 # 外部非源码参考库与配置
 skills-master/
 .zcode/
+
+# git filter-repo 临时文件（勿提交）
+.git-filter-replace-*.txt

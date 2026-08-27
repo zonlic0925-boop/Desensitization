@@ -11,7 +11,7 @@ SHORT_TERM_MAX_LEN = 4
 _DISCRIMINATOR_STOPWORDS = {
     "a", "an", "the", "of", "for", "to", "and", "or", "in", "on", "at",
     "inc", "llc", "co", "corp", "ltd", "do", "not", "copy",
-    "process", "management", "controls", "company", "usa", "kentucky",
+    "process", "management", "controls", "company", "usa", "kentucky", "industrial",
 }
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
